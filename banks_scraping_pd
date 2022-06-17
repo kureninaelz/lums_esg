@@ -1,0 +1,272 @@
+#libraries
+
+import pandas as pd
+import numpy as np
+import csv
+
+from bs4 import BeautifulSoup
+import requests
+import re
+from csv import writer
+import string
+from nltk.tokenize import word_tokenize as tokenise # import Python natural language processing toolkit
+import codecs # encoding library
+import nltk
+nltk.download('punkt')
+import matplotlib.pyplot as plt
+import logging
+import pickle
+import random
+from collections import defaultdict
+
+from nltk import jsontags
+from nltk.data import find, load
+from nltk.tag.api import TaggerI
+
+try:
+    import numpy as np
+except ImportError:
+    pass
+
+PICKLE = "averaged_perceptron_tagger.pickle"
+
+import requests
+import justext
+
+#scraping
+
+banks = pd.read_csv("banks_list.csv", sep=';')
+#print(banks.head())
+
+tic = banks["ticker"]
+#print(tic)
+#banks["url"].shape
+
+tic_url = banks[["ticker","url"]] #the inner square brackets define a Python list with column names; the outer brackets are used to select the data from a DataFrame 
+#print(tic_url)
+
+inactive = banks[banks["status"] == "I"]
+#print(inactive)
+inactive.shape
+
+active = banks[banks["status"] == "A"]
+#print(active)
+active.shape
+
+urls = banks[banks["url"].notna()]
+#print(urls)
+urls.shape #we are lacking apprx 300 links
+
+urlinactive = banks.loc[banks["status"] == "I", "url"] #the part before the comma is the rows you want, and the part after the comma is the columns you want to select
+#print(urlinactive)
+
+#select = banks.iloc[230:233,2:7]
+#print(select)
+
+#banks.iloc[0:3,2] = "" to attain the new value
+
+
+banks['text'] = ""
+#banks.shape
+
+######## HSBC
+
+url = "https://www.hsbc.ca" 
+page = requests.get(url)
+#print(page.content)
+
+soup = BeautifulSoup(page.content, 'html.parser') #an object with the whole html code
+#print(soup)
+
+#mind that the tags of our particular interest vary significuntly from site to site (i.e. from bank to bank) >>
+#inspect to the particular tag / section via Inspect tool and find all the sections with a specific class_
+
+any_data = soup.find_all("p")
+#print(any_data)
+
+mylist = []
+for p in any_data:
+    mylist.append(p.get_text())
+
+#print(mylist)
+
+text = " ".join(mylist)
+
+text = text.replace(",", " ") #object type = string
+#print(text)
+
+banks[banks["ticker"] == "HSBC"]
+hsbc = banks.iloc[414,4]
+print(hsbc)
+
+banks.iloc[414,11] = text
+hsbc = banks.iloc[414]
+print(hsbc)
+
+######## JPM
+
+url1 = "https://www.jpmorganchase.com"
+page1 = requests.get(url1)
+#print(page1.content)
+
+soup1 = BeautifulSoup(page1.content, 'html.parser') #an object with the whole html code
+#print(soup)
+
+#mind that the tags of our particular interest vary significuntly from site to site (i.e. from bank to bank) >>
+#inspect to the particular tag / section via Inspect tool and find all the sections with a specific class_
+
+any_data1 = soup1.find_all("p")
+#print(any_data)
+
+mylist1 = []
+for p in any_data1:
+    mylist1.append(p.get_text())
+
+#print(mylist)
+
+text1 = " ".join(mylist1)
+
+text1 = text1.replace(",", " ") #object type = string
+#print(text1)
+
+banks[banks["ticker"] == "JPM"]
+jpm = banks.iloc[439,4]
+print(jpm)
+
+banks.iloc[439,11] = text1
+jpm = banks.iloc[439]
+print(jpm)
+
+######## BRKL
+
+banks[banks["ticker"] == "BRKL"]
+link_brkl = "https://"+banks.iloc[119,10] #link is in column 10
+print(link_brkl)
+
+url2 = link_brkl
+page2 = requests.get(url2)
+#print(page2.content)
+
+soup2 = BeautifulSoup(page2.content, 'html.parser') #an object with the whole html code
+#print(soup2)
+
+#mind that the tags of our particular interest vary significuntly from site to site (i.e. from bank to bank) >>
+#inspect to the particular tag / section via Inspect tool and find all the sections with a specific class_
+
+any_data2 = soup2.find_all("p")
+#print(any_data2)
+
+mylist2 = []
+for p in any_data2:
+    mylist2.append(p.get_text())
+
+#print(mylist2)
+
+text2 = " ".join(mylist2)
+
+text2 = text2.replace(",", " ") #object type = string
+#print(text2)
+
+banks[banks["ticker"] == "BRKL"]
+brkl = banks.iloc[119,4]
+print(brkl)
+
+banks.iloc[119,11] = text2
+brkl = banks.iloc[119]
+#print(brkl)
+
+####### BELOW I AM APPROACHING IT ONE BY ONE FROM THE TOP
+
+############ retrive the link
+
+banks[banks["num"] == 1]
+tic1 = banks.iloc[0,2]
+print(tic1)
+link_1 = "https://"+banks.iloc[0,10] #link is in column 10
+#print(link_1)
+
+
+############ scrape the text
+
+url4 = link_1
+page4 = requests.get(url4)
+#print(page4.content)
+
+soup4 = BeautifulSoup(page4.content, 'html.parser') #an object with the whole html code
+#print(soup4)
+
+#mind that the tags of our particular interest vary significuntly from site to site (i.e. from bank to bank) >>
+#inspect to the particular tag / section via Inspect tool and find all the sections with a specific class_
+
+any_data4 = soup4.find_all("p")
+#print(any_data4)
+
+mylist4 = []
+for p in any_data4:
+    mylist4.append(p.get_text())
+    
+response4 = requests.get(link_1)
+#print (response4.content)
+paragraphs4 = justext.justext(response4.content, justext.get_stoplist("English"))
+
+for paragraph in paragraphs4:
+  if paragraph.is_boilerplate: 
+# if not paragraph.is_boilerplate: #try both 'if' and 'if not'
+    mylist4.append(paragraph.text)
+#print(mylist3)
+
+for paragraph in paragraphs4:
+  if not paragraph.is_boilerplate: 
+# if not paragraph.is_boilerplate: #try both 'if' and 'if not'
+    mylist4.append(paragraph.text)
+
+#print(mylist4)
+
+text4 = " ".join(mylist4)
+
+text4 = text4.replace(",", " ") #object type = string
+#print(text4)
+
+############ write down to DF
+
+banks.iloc[0,11] = text4
+one = banks.iloc[0]
+print(one)
+
+
+####### BELOW I AM TRYING TO LOOP OVER ALL THE LINKS IN DF
+
+#mind that code below is broket when parsing is restricted
+
+urls = banks["url"]
+#print(urls)
+
+urls = "https://"+urls[urls.notna()]
+print(urls)
+
+for ur in urls:
+    page = requests.get(ur)
+    #print(page.content)
+    soup = BeautifulSoup(page.content, 'html.parser') #an object with the whole html code
+#print(soup)
+
+#mind that the tags of our particular interest vary significuntly from site to site (i.e. from bank to bank) >>
+#inspect to the particular tag / section via Inspect tool and find all the sections with a specific class_
+
+    any_data = soup.find_all("p")
+#print(any_data)
+
+    mylist = []
+    for p in any_data:
+        mylist.append(p.get_text())
+
+#print(mylist)
+
+    text = " ".join(mylist)
+
+    text = text.replace(",", " ") #object type = string
+    print(text)
+
+for ur in urls:
+    print(ur)
+    
